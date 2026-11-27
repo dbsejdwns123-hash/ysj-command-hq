@@ -759,6 +759,7 @@ function gateMsg(text, kind) {
 function gateShake() {
   const card = document.getElementById('gate-card');
   if (!card) return;
+  card.classList.add('settled');
   card.classList.remove('shake');
   void card.offsetWidth;
   card.classList.add('shake');
@@ -770,6 +771,7 @@ function showGate() {
   const gate = document.getElementById('gate');
   gate.hidden = false;
   gate.classList.remove('granted');
+  document.getElementById('gate-card').classList.remove('settled');
   document.body.classList.add('locked');
 }
 

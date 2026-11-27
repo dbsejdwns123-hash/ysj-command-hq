@@ -853,12 +853,6 @@ body.locked{overflow:hidden}
   background:linear-gradient(90deg,transparent,#0EA5E9,rgba(245,158,11,.7),transparent);
   box-shadow:0 0 12px rgba(14,165,233,.6);
 }
-.gate-scan{
-  position:absolute;left:0;right:0;top:-40%;height:38%;pointer-events:none;
-  background:linear-gradient(180deg,transparent,rgba(14,165,233,.09),transparent);
-  animation:gateScan 4.6s linear infinite;
-}
-@keyframes gateScan{0%{transform:translateY(0)}100%{transform:translateY(420%)}}
 
 .gate-emblem{
   position:relative;width:56px;height:56px;margin:2px auto 10px;
@@ -965,4 +959,11 @@ body.locked{overflow:hidden}
   .key{height:38px;font-size:16.5px}
   .keypad{gap:6px;margin:10px 0 9px}
   #gate-input{font-size:22px;padding:10px 6px 10px 16px}
+}
+
+/* 게이트 진입 애니메이션 1회 후 고정 (shake 후 재페이드 방지) */
+.gate-card.settled:not(.shake){animation:none}
+@media (max-width:430px){
+  .lock-pill span{display:none}
+  .lock-pill{padding:4px 8px;font-size:11px}
 }
