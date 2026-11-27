@@ -12,7 +12,9 @@ const LS = {
   sender: 'ysj.sender.v1',
   room: 'ysj.room.v1',
   fb: 'ysj.fb.v1',
-  stage: 'ysj.stage.v1'
+  stage: 'ysj.stage.v1',
+  gkey: 'ysj_gemini_api_key',
+  gmodel: 'ysj_gemini_model'
 };
 
 /* ---------------- static data ---------------- */
@@ -70,6 +72,50 @@ const LINES = {
   ]
 };
 
+/* =========================================================
+   GEMINI · AI LIVE
+   키는 이 브라우저(localStorage)에만 저장합니다. 코드/저장소에 절대 넣지 않습니다.
+   ========================================================= */
+const GEMINI = {
+  base: 'https://generativelanguage.googleapis.com/v1beta/models/',
+  defaultModel: 'gemini-2.5-flash',
+  fallbackModel: 'gemini-2.0-flash',
+  personas: {
+    mumu: [
+      "너는 '무무'다. 성준(대장님)의 메인 비서이자 YSJ CORP 통합 비서실의 수석비서다.",
+      '주토피아의 주디 홉스처럼 밝고 당차고 재치 있는 말투를 쓰되, 항상 존댓말로 말한다.',
+      '맡은 일: 데이픽스 스마트스토어 운영(상품 등록·가격·마진·태그·상품진단), 일정·기획 정리, 대장님 지시 수행.',
+      '답변은 짧고 읽기 편하게 2~4문장으로 하고, 항목이 여러 개면 줄바꿈 목록으로 정리한다.',
+      '회의실 채팅에서 대장님과 동료 비서 우땅 비서와 함께 대화한다.',
+      '모르는 것은 아는 척하지 말고 확인이 필요하다고 말한다.',
+      '개인정보, 비밀번호, 인증키, 결제정보는 절대 요구하거나 출력하지 않는다.',
+      '이모지는 꼭 필요할 때만 하나 정도 쓴다.'
+    ].join(' '),
+    uttang: [
+      "너는 '우땅 비서'다. 협력 파트너 우땅의 비서로, YSJ CORP 통합 비서실에서 무무와 함께 일한다.",
+      '차분하고 실무적인 존댓말로 말한다.',
+      '맡은 일: 당근스토어 오늘제철과 공급처 십이월마켓의 상품 점검, 마크·썸네일·상세페이지 정비, 협업 안건 정리.',
+      '무무의 답변이 이미 있으면 그 내용을 자연스럽게 이어받아 보완하고, 다른 의견이면 정중히 덧붙인다.',
+      '답변은 짧고 실무적으로 2~4문장.',
+      '모르는 것은 아는 척하지 말고 확인이 필요하다고 말한다.',
+      '개인정보, 비밀번호, 인증키, 결제정보는 절대 요구하거나 출력하지 않는다.',
+      '이모지는 꼭 필요할 때만 하나 정도 쓴다.'
+    ].join(' ')
+  }
+};
+
+function geminiKey() {
+  try { return (localStorage.getItem(LS.gkey) || '').trim(); } catch (e) { return ''; }
+}
+function geminiModel() {
+  try { return localStorage.getItem(LS.gmodel) || GEMINI.defaultModel; } catch (e) { return GEMINI.defaultModel; }
+}
+function maskKey(k) {
+  if (!k) return '';
+  if (k.length <= 8) return '••••';
+  return k.slice(0, 4) + '••••••••' + k.slice(-4);
+}
+
 /* ---------------- state ---------------- */
 const state = {
   tab: 'map',
@@ -79,7 +125,9 @@ const state = {
   msg: load(LS.msg, null),
   memo: load(LS.memo, []),
   done: load(LS.done, []),
-  bubble: {}          // agent key -> open?
+  bubble: {},         // agent key -> open?
+  typing: {},         // agent key -> 입력 중…
+  aiBusy: false
 };
 
 const FB = { base: normUrl(localStorage.getItem(LS.fb) || ''), es: null, room: null, online: false };
@@ -270,8 +318,28 @@ function renderChat() {
   const list = (state.msg && state.msg[state.room]) ? state.msg[state.room].slice() : [];
   list.sort((a, b) => (a.ts || 0) - (b.ts || 0));
 
+  const typingRow = Object.keys(state.typing)
+    .filter(k => state.typing[k])
+    .map(k => {
+      const snd = SENDERS[k] || SENDERS.mumu;
+      return `
+        <div class="msg typing-row" data-typing="${k}">
+          <span class="av">${snd.emoji}</span>
+          <div class="body">
+            <div class="who"><b>${esc(snd.short)}</b><time>입력 중…</time></div>
+            <div class="bubble typing"><i></i><i></i><i></i></div>
+          </div>
+        </div>`;
+    }).join('');
+
   chat.innerHTML = list.map(m => {
     if (m.s === 'system') {
+      if (m.action === 'settings') {
+        return `<div class="msg sys sys-wide">
+          <div class="sys-text">${linkMentions(esc(m.t))}</div>
+          <button class="sys-btn" data-settings-open="1">⚙️ 설정 열기</button>
+        </div>`;
+      }
       return `<div class="msg sys">${esc(m.t)}</div>`;
     }
     const snd = SENDERS[m.s] || SENDERS.mumu;
@@ -284,7 +352,7 @@ function renderChat() {
           <div class="bubble">${linkMentions(esc(m.t))}</div>
         </div>
       </div>`;
-  }).join('');
+  }).join('') + typingRow;
   scrollChat();
 }
 
@@ -294,6 +362,36 @@ function scrollChat() {
 }
 
 function persistMsgs() { save(LS.msg, state.msg); }
+
+function pushRemote(m, room) {
+  if (!FB.base) return;
+  fetch(`${FB.base}/rooms/${room}/${m.id}.json`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ s: m.s, t: m.t, ts: m.ts })
+  }).then(res => {
+    if (!res.ok) throw new Error('http ' + res.status);
+  }).catch(() => {
+    setMode('local');
+    toast('DB 전송 실패 · 기기에 저장했습니다');
+  });
+}
+
+function addMessage(msg, room) {
+  room = room || state.room;
+  const m = Object.assign({ id: uid(), ts: Date.now() }, msg);
+  if (!state.msg[room]) state.msg[room] = [];
+  state.msg[room].push(m);
+  persistMsgs();
+  if (room === state.room) renderChat();
+  pushRemote(m, room);
+  return m;
+}
+
+function setTyping(key, on) {
+  state.typing[key] = !!on;
+  if (state.tab === 'room') renderChat();
+}
 
 function sendMessage() {
   const input = document.getElementById('msg-input');
@@ -308,30 +406,211 @@ function sendMessage() {
 
   input.value = '';
   input.style.height = 'auto';
+  pushRemote(m, state.room);
 
-  if (FB.base) {
-    fetch(`${FB.base}/rooms/${state.room}/${m.id}.json`, {
-      method: 'PUT',
+  // 사람이 쓴 메시지만 AI 응답을 유도합니다.
+  if (m.s === 'seongjun') handleAI(text, state.room);
+}
+
+/* =========================================================
+   AI LIVE · Gemini 회의실 대화
+   ========================================================= */
+function aiTargets(text) {
+  const hasMumu = /@무무/.test(text);
+  const hasUttang = /@우땅비서/.test(text);
+  if (hasMumu && hasUttang) return ['mumu', 'uttang'];
+  if (hasMumu) return ['mumu'];
+  if (hasUttang) return ['uttang'];
+  return ['mumu', 'uttang'];   // @all 또는 멘션 없음 → 무무 먼저, 우땅이 이어받기
+}
+
+/* 방의 최근 대화를 Gemini contents 로 변환 (최대 12개, system 제외) */
+function buildContents(room, tail) {
+  const src = (state.msg[room] || [])
+    .filter(m => m.s !== 'system')
+    .slice(-12);
+  const out = [];
+  const push = (role, body) => {
+    const txt = (body || '').trim();
+    if (!txt) return;
+    const last = out[out.length - 1];
+    if (last && last.role === role) last.parts[0].text += '\n' + txt;
+    else out.push({ role, parts: [{ text: txt }] });
+  };
+  src.forEach(m => {
+    const snd = SENDERS[m.s] || SENDERS.mumu;
+    if (snd.me) push('user', m.t);
+    else push('model', `[${snd.short}] ${m.t}`);
+  });
+  while (out.length && out[0].role !== 'user') out.shift();
+  if (tail) push('user', tail);
+  if (!out.length) push('user', '대장님, 잠깐 인사해 주세요.');
+  return out;
+}
+
+async function callGemini(model, systemText, contents) {
+  const key = geminiKey();
+  const url = GEMINI.base + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key);
+  const payload = {
+    systemInstruction: { parts: [{ text: systemText }] },
+    contents,
+    generationConfig: { temperature: 0.9, maxOutputTokens: 1024 }
+  };
+  if (/^gemini-2\.5/.test(model)) payload.generationConfig.thinkingConfig = { thinkingBudget: 0 };
+
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ s: m.s, t: m.t, ts: m.ts })
-    }).then(res => {
-      if (!res.ok) throw new Error('http ' + res.status);
-    }).catch(() => {
-      setMode('local');
-      toast('DB 전송 실패 · 기기에 저장했습니다');
+      body: JSON.stringify(payload)
     });
+  } catch (e) {
+    const err = new Error('network');
+    err.code = 'network';
+    throw err;
+  }
+
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const j = await res.json();
+      detail = (j && j.error && j.error.message) ? j.error.message : '';
+    } catch (e) {}
+    const err = new Error(detail || ('http ' + res.status));
+    err.status = res.status;
+    err.detail = detail;
+    err.code = res.status === 400 ? 'key'
+      : res.status === 401 || res.status === 403 ? 'denied'
+      : res.status === 404 ? 'model'
+      : res.status === 429 ? 'quota'
+      : 'server';
+    throw err;
+  }
+
+  const data = await res.json();
+  const cand = data && data.candidates && data.candidates[0];
+  const parts = cand && cand.content && cand.content.parts ? cand.content.parts : [];
+  const text = parts.map(p => p.text || '').join('').trim();
+  if (!text) {
+    const block = data && data.promptFeedback && data.promptFeedback.blockReason;
+    const err = new Error(block ? 'blocked:' + block : 'empty');
+    err.code = 'empty';
+    throw err;
+  }
+  return text;
+}
+
+async function askGemini(who, contents) {
+  const chain = [geminiModel(), GEMINI.defaultModel, GEMINI.fallbackModel]
+    .filter((m, i, a) => m && a.indexOf(m) === i);
+  const sys = GEMINI.personas[who] +
+    ' 지금은 YSJ CORP 통합 비서실의 회의실 채팅이다. 대장님(성준)의 메시지에 답한다.';
+
+  let lastErr = null;
+  for (let i = 0; i < chain.length; i++) {
+    try {
+      return await callGemini(chain[i], sys, contents);
+    } catch (e) {
+      lastErr = e;
+      const retryable = (e.code === 'model' || e.code === 'quota' || e.code === 'server');
+      if (!retryable || i === chain.length - 1) break;
+      try { localStorage.setItem(LS.gmodel, chain[i + 1]); } catch (err) {}
+    }
+  }
+  throw lastErr;
+}
+
+function aiErrorText(e) {
+  if (!e) return '⚠️ 답변을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+  if (e.code === 'key') {
+    return '⚠️ API 키가 올바르지 않은 것 같아요. ⚙️ 설정에서 키를 다시 확인해 주세요. (400)';
+  }
+  if (e.code === 'denied') {
+    return '⚠️ 이 키로는 Gemini를 사용할 수 없어요. 키 권한이나 사용 설정을 확인해 주세요. (403)';
+  }
+  if (e.code === 'quota') {
+    return '⚠️ 무료 사용량을 모두 썼어요. 잠시 뒤 다시 시도하거나 내일 이어서 쓰면 됩니다. (429)';
+  }
+  if (e.code === 'model') {
+    return '⚠️ 선택한 모델을 지금 쓸 수 없어요. 설정에서 모델을 gemini-2.0-flash로 바꿔 보세요. (404)';
+  }
+  if (e.code === 'network') {
+    return '⚠️ Gemini 서버에 연결하지 못했어요. 네트워크 연결을 확인해 주세요.';
+  }
+  if (e.code === 'empty') {
+    return '⚠️ 답변이 비어 있어요. 표현을 조금 바꿔 다시 물어봐 주세요.';
+  }
+  return '⚠️ Gemini 응답 중 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요. (' + esc(String(e.message || 'error')).slice(0, 60) + ')';
+}
+
+async function handleAI(text, room) {
+  if (!geminiKey()) {
+    addMessage({ s: 'system', t: '⚙️ 설정에서 무료 Gemini API 키를 입력하면 무무·우땅 비서가 바로 대답해요! ⚙️(상단 톱니바퀴) 버튼을 눌러 키를 넣어 주세요.', action: 'settings' }, room);
+    return;
+  }
+  if (state.aiBusy) {
+    addMessage({ s: 'system', t: '⏳ 아직 답변을 작성하는 중이에요. 조금만 기다려 주세요.' }, room);
+    return;
+  }
+
+  const targets = aiTargets(text);
+  state.aiBusy = true;
+  let prev = null;
+
+  try {
+    for (const who of targets) {
+      setTyping(who, true);
+      let replied = null;
+      try {
+        const tail = (prev === 'mumu' && who === 'uttang')
+          ? '[무무 답변을 이어받아] 위 무무의 답변을 자연스럽게 이어받아, 우땅 비서로서 한 번만 답해 주세요.'
+          : null;
+        const contents = buildContents(room, tail);
+        replied = await askGemini(who, contents);
+      } catch (e) {
+        setTyping(who, false);
+        addMessage({ s: 'system', t: aiErrorText(e) }, room);
+        break;
+      }
+      setTyping(who, false);
+      addMessage({ s: who, t: replied, ts: Date.now() }, room);
+      prev = who;
+    }
+  } finally {
+    state.typing = {};
+    state.aiBusy = false;
+    if (state.tab === 'room') renderChat();
   }
 }
+
+/* 설정 모달을 여는 버튼(시스템 메시지 내) */
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-settings-open]');
+  if (btn) openSheet();
+});
 
 /* =========================================================
    FIREBASE REALTIME (REST + EventSource)
    ========================================================= */
 function setMode(mode) {
   FB.online = (mode === 'online');
+  updateBadges();
+}
+
+function updateBadges() {
+  const ai = !!geminiKey();
+
+  const live = document.getElementById('hud-live');
+  const liveTxt = document.getElementById('hud-live-txt');
+  if (liveTxt) liveTxt.textContent = ai ? 'AI LIVE' : 'LIVE';
+  if (live) live.classList.toggle('ai', ai);
+
   const el = document.getElementById('room-mode');
   if (el) {
-    el.textContent = FB.online ? 'REALTIME' : 'LOCAL';
-    el.classList.toggle('online', FB.online);
+    el.textContent = ai ? 'AI LIVE' : (FB.online ? 'REALTIME' : 'LOCAL');
+    el.classList.toggle('ai', ai);
+    el.classList.toggle('online', !ai && FB.online);
   }
 }
 
@@ -563,6 +842,7 @@ function openSheet() {
   document.getElementById('backdrop').classList.remove('hidden');
   document.getElementById('db-url').value = FB.base || '';
   updateDbStatus();
+  updateGeminiUI();
 }
 function closeSheet() {
   document.getElementById('sheet').classList.remove('open');
@@ -605,6 +885,82 @@ async function saveDb() {
     el.className = 'status err';
     el.innerHTML = `<b>연결 확인 실패</b><br>${esc(e.message)} · 주소와 DB 규칙(읽기/쓰기 허용)을 확인하세요.<br>설정은 저장했으니 나중에 자동 재시도됩니다.`;
   }
+}
+
+/* ---------------- Gemini 설정 ---------------- */
+function updateGeminiUI() {
+  const key = geminiKey();
+  const input = document.getElementById('gemini-key');
+  const sel = document.getElementById('gemini-model');
+  const badge = document.getElementById('gemini-badge');
+  const status = document.getElementById('gemini-status');
+
+  if (sel) sel.value = geminiModel();
+  if (input) {
+    input.value = '';
+    input.placeholder = key ? maskKey(key) + ' 저장됨 · 바꿀 때만 새로 입력' : 'AIza...';
+  }
+  if (badge) {
+    badge.textContent = key ? 'ON' : 'OFF';
+    badge.className = 'badge' + (key ? ' ok' : '');
+  }
+  if (status) {
+    if (key) {
+      status.className = 'status ok';
+      status.innerHTML = `연결됨 · <b>${esc(maskKey(key))}</b> · 모델 <b>${esc(geminiModel())}</b><br>키는 이 브라우저에만 저장됩니다.`;
+    } else {
+      status.className = 'status';
+      status.innerHTML = '현재 <b>미설정</b> · 키는 이 브라우저에만 저장됩니다.';
+    }
+  }
+  updateBadges();
+}
+
+function saveGemini() {
+  const input = document.getElementById('gemini-key');
+  const sel = document.getElementById('gemini-model');
+  const status = document.getElementById('gemini-status');
+  const raw = (input ? input.value : '').trim().replace(/^["']|["']$/g, '');
+  const had = !!geminiKey();
+
+  if (sel && sel.value) {
+    try { localStorage.setItem(LS.gmodel, sel.value); } catch (e) {}
+  }
+
+  if (!raw) {
+    if (had) {
+      updateGeminiUI();
+      toast('모델 설정을 저장했어요');
+    } else {
+      if (status) { status.className = 'status err'; status.innerHTML = '<b>키를 입력하세요</b> · aistudio.google.com/apikey 에서 무료 발급'; }
+    }
+    return;
+  }
+
+  try { localStorage.setItem(LS.gkey, raw); } catch (e) {
+    if (status) { status.className = 'status err'; status.innerHTML = '<b>저장 실패</b> · 브라우저 저장 공간을 확인하세요.'; }
+    return;
+  }
+  if (input) input.value = '';
+  updateGeminiUI();
+
+  const looksOk = /^AIza[0-9A-Za-z_\-]{20,}$/.test(raw);
+  if (status) {
+    status.className = looksOk ? 'status ok' : 'status err';
+    status.innerHTML = looksOk
+      ? `저장 완료 · <b>${esc(maskKey(raw))}</b> · 모델 <b>${esc(geminiModel())}</b><br>회의실에서 @무무 · @우땅비서 · @all 로 불러 보세요.`
+      : '저장했지만 <b>AIza…</b> 형식이 아니에요. 첫 대화에서 400 오류가 나면 키를 다시 확인하세요.';
+  }
+  toast('Gemini 키 저장 · AI LIVE');
+  addMessage({ s: 'system', t: '🟢 AI LIVE 연결됨 · 이제 @무무 / @우땅비서 / @all 로 부르면 바로 답해요.' }, state.room);
+}
+
+function clearGemini() {
+  try { localStorage.removeItem(LS.gkey); } catch (e) {}
+  const input = document.getElementById('gemini-key');
+  if (input) input.value = '';
+  updateGeminiUI();
+  toast('Gemini 키를 삭제했어요 · LOCAL 모드');
 }
 
 function clearDb() {
@@ -946,10 +1302,22 @@ function boot() {
   document.getElementById('btn-settings').addEventListener('click', openSheet);
   document.getElementById('sheet-close').addEventListener('click', closeSheet);
   document.getElementById('backdrop').addEventListener('click', closeSheet);
+  document.getElementById('gemini-save').addEventListener('click', saveGemini);
+  document.getElementById('gemini-clear').addEventListener('click', clearGemini);
+  const modelSel = document.getElementById('gemini-model');
+  if (modelSel) {
+    modelSel.addEventListener('change', () => {
+      try { localStorage.setItem(LS.gmodel, modelSel.value); } catch (e) {}
+      updateGeminiUI();
+    });
+  }
+  document.getElementById('gemini-key').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); saveGemini(); }
+  });
   document.getElementById('db-save').addEventListener('click', saveDb);
   document.getElementById('db-clear').addEventListener('click', clearDb);
   document.getElementById('reset-all').addEventListener('click', () => {
-    [LS.msg, LS.memo, LS.done, LS.sender, LS.room, LS.stage].forEach(k => localStorage.removeItem(k));
+    [LS.msg, LS.memo, LS.done, LS.sender, LS.room, LS.stage, LS.gkey, LS.gmodel].forEach(k => localStorage.removeItem(k));
     gateForget();
     toast('초기화 완료 · 새로고침합니다');
     setTimeout(() => location.reload(), 700);

@@ -786,6 +786,73 @@ body{
 .sheet-note code{font-family:var(--hud);background:rgba(37,99,235,.1);padding:0 4px;border-radius:4px;color:#1D4ED8}
 .version{text-align:center;font-family:var(--hud);font-size:9px;letter-spacing:.18em;color:#A8B9C9;margin:16px 0 0}
 
+/* ---------------- Gemini · AI LIVE ---------------- */
+.live.ai{
+  color:#047857;background:rgba(16,185,129,.16);border-color:rgba(16,185,129,.45);
+  box-shadow:0 0 0 1px rgba(16,185,129,.12) inset;
+}
+.room-mode.ai{color:#047857;border-color:rgba(16,185,129,.45);background:rgba(16,185,129,.14)}
+.badge.ok{color:#047857;background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.32)}
+
+.sheet-block{
+  padding:12px;border-radius:14px;margin-bottom:14px;
+  background:linear-gradient(160deg,rgba(236,253,245,.92),rgba(255,255,255,.94));
+  border:1px solid rgba(16,185,129,.3);
+  box-shadow:0 14px 28px -24px rgba(4,120,87,.9);
+}
+.block-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.block-head .kicker{color:#047857;font-family:var(--hud);font-size:9px;letter-spacing:.18em;font-weight:700}
+.block-desc{margin:0 0 10px;font-size:10.5px;line-height:1.6;color:#5C7A99}
+.block-desc b{color:#0B2B4A}
+.field-row{display:flex;align-items:flex-end;gap:8px}
+.field-row .field{margin-bottom:0}
+.field.grow{flex:1;min-width:0}
+.field select{
+  width:100%;padding:11px 10px;border-radius:11px;border:1px solid var(--line);
+  font-family:inherit;font-size:12px;font-weight:600;color:#12293F;
+  background:#fff;outline:none;transition:.16s;
+}
+.field select:focus{border-color:rgba(14,165,233,.6);box-shadow:0 0 0 3px rgba(14,165,233,.1)}
+.key-save{flex:none;padding:11px 16px;margin-top:0}
+.sheet-block .btn-ghost.wide{margin-top:8px;background:rgba(255,255,255,.95)}
+.key-note{margin:9px 2px 0;font-size:10px;color:#7B8FA6}
+.key-note a{color:#1D4ED8;font-weight:700;text-decoration:none;border-bottom:1px solid rgba(37,99,235,.32)}
+
+/* 시스템 안내 + 설정 열기 버튼 */
+.msg.sys-wide{
+  align-self:stretch;max-width:100%;
+  display:flex;flex-direction:column;align-items:stretch;gap:8px;
+  font-family:inherit;letter-spacing:-.01em;
+  font-size:11.5px;line-height:1.55;color:#2E4C6B;text-align:left;
+  padding:11px 12px;border-radius:14px;
+  background:rgba(255,255,255,.94);border:1px dashed rgba(37,99,235,.3);
+}
+.msg.sys-wide .sys-text{white-space:pre-wrap;word-break:break-word}
+.msg.sys-wide .mention{color:#1D4ED8;font-weight:700;background:rgba(37,99,235,.09);padding:0 3px;border-radius:4px}
+.sys-btn{
+  align-self:flex-start;cursor:pointer;font-family:inherit;
+  font-size:11.5px;font-weight:800;color:#fff;
+  border:0;padding:8px 14px;border-radius:10px;
+  background:linear-gradient(150deg,#38BDF8,#2563EB 72%);
+  box-shadow:0 8px 18px -12px rgba(37,99,235,.95);
+  transition:.16s;
+}
+.sys-btn:active{transform:translateY(1px) scale(.985)}
+
+/* 입력 중… */
+.msg.typing-row .who time{color:#0EA5E9}
+.bubble.typing{display:inline-flex;align-items:center;gap:4px;padding:12px 13px}
+.bubble.typing i{
+  width:6px;height:6px;border-radius:50%;background:#9DB4CB;display:block;
+  animation:typBounce 1.05s ease-in-out infinite;
+}
+.bubble.typing i:nth-child(2){animation-delay:.15s}
+.bubble.typing i:nth-child(3){animation-delay:.3s}
+@keyframes typBounce{
+  0%,60%,100%{transform:translateY(0);opacity:.45}
+  30%{transform:translateY(-4px);opacity:1}
+}
+
 /* ---------------- toast ---------------- */
 .toast{
   position:fixed;left:50%;bottom:calc(152px + env(safe-area-inset-bottom));transform:translate(-50%,14px);
