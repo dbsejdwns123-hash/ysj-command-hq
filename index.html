@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F6FC">
+<title>성준 통합 비서실 · YSJ CORP</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='48' font-size='46'%3E%F0%9F%91%91%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="bg-grid" aria-hidden="true"></div>
+
+<!-- ================= SECURITY ACCESS GATE ================= -->
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+  <div class="gate-card" id="gate-card">
+    <span class="gate-scan" aria-hidden="true"></span>
+
+    <div class="gate-emblem" aria-hidden="true">
+      <span class="gate-ring"></span>
+      <span class="gate-lock">🔐</span>
+    </div>
+    <span class="gate-kicker">COMMAND HQ <b>·</b> SECURITY</span>
+    <h1 class="gate-title" id="gate-title">👑 YSJ CORP · COMMAND HQ 보안 인증</h1>
+    <p class="gate-sub">비서실 입장에는 접근 코드가 필요합니다.</p>
+
+    <form class="gate-form" id="gate-form" autocomplete="off" novalidate>
+      <div class="gate-code">
+        <input id="gate-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="12"
+               aria-label="접근 코드" placeholder="CODE" autocomplete="off" spellcheck="false" autocapitalize="off">
+      </div>
+
+      <div class="keypad" id="keypad">
+        <button type="button" class="key" data-key="1">1</button>
+        <button type="button" class="key" data-key="2">2</button>
+        <button type="button" class="key" data-key="3">3</button>
+        <button type="button" class="key" data-key="4">4</button>
+        <button type="button" class="key" data-key="5">5</button>
+        <button type="button" class="key" data-key="6">6</button>
+        <button type="button" class="key" data-key="7">7</button>
+        <button type="button" class="key" data-key="8">8</button>
+        <button type="button" class="key" data-key="9">9</button>
+        <button type="button" class="key fn" data-key="del" aria-label="한 자리 지우기">⌫</button>
+        <button type="button" class="key" data-key="0">0</button>
+        <button type="button" class="key fn" data-key="clear" aria-label="전체 지우기">C</button>
+      </div>
+
+      <label class="gate-keep">
+        <input type="checkbox" id="gate-keep">
+        <span>이 기기에서 유지</span>
+      </label>
+
+      <button type="submit" class="btn-primary wide gate-submit" id="gate-unlock">잠금 해제</button>
+      <p class="gate-msg" id="gate-msg" role="status" aria-live="polite"></p>
+    </form>
+
+    <div class="gate-foot"><i class="led pulse"></i> SHA-256 SECURE CHANNEL</div>
+  </div>
+</div>
+
+<div class="app" id="app" hidden>
+
+  <!-- ================= GAME HUD ================= -->
+  <header class="hudbar">
+    <div class="hud-row1">
+      <div class="logo">👑</div>
+      <div class="brand">
+        <div class="brand-line">
+          <span class="corp">YSJ CORP</span>
+          <span class="lv" id="hud-lv">LV 1</span>
+        </div>
+        <div class="brand-sub">성준 통합 비서실 <span class="dotsep">·</span> COMMAND HQ</div>
+      </div>
+      <div class="hud-right">
+        <span class="live"><i class="led pulse"></i>LIVE</span>
+        <button class="lock-pill" id="btn-lock" aria-label="잠금" title="잠금">🔒 <span>잠금</span></button>
+        <button class="icon-btn" id="btn-settings" aria-label="설정">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94a7.4 7.4 0 0 0 .05-.94 7.4 7.4 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.63l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.55-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.85a.5.5 0 0 0 .12.63l2.03 1.58c-.04.31-.06.62-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.63l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.5.39 1.04.71 1.62.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.23 1.12-.55 1.62-.94l2.39.96c.22.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.63l-2.03-1.58zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="hud-row2">
+      <div class="xp">
+        <div class="xp-top"><span>회사 XP</span><b id="hud-xp-txt">0 / 150</b></div>
+        <div class="bar xpbar"><i id="hud-xp" style="width:0%"></i></div>
+      </div>
+      <div class="hud-stats">
+        <span class="hstat"><em id="hud-dept">3</em><small>부서</small></span>
+        <span class="hstat"><em id="hud-on">2</em><small>직원 ON</small></span>
+        <span class="hstat"><em id="hud-mission">0%</em><small>미션</small></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= TABS ================= -->
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="map" role="tab"><span>🗺️</span>오피스 맵</button>
+    <button class="tab" data-tab="room" role="tab"><span>💬</span>회의실</button>
+    <button class="tab" data-tab="work" role="tab"><span>📋</span>작업실</button>
+    <button class="tab" data-tab="agents" role="tab"><span>📊</span>비서현황</button>
+    <button class="tab" data-tab="memo" role="tab"><span>📝</span>메모</button>
+  </nav>
+
+  <main id="main">
+
+    <!-- ================= MAP ================= -->
+    <section class="view active" id="v-map">
+      <div class="seg">
+        <button class="seg-btn active" data-stage="ext">🏢 회사 본사 외관</button>
+        <button class="seg-btn" data-stage="int">🗺️ 사옥 내부 맵</button>
+      </div>
+
+      <!-- exterior -->
+      <div class="stage" id="stage-ext">
+        <div class="stage-top">
+          <span class="hud-tag">YSJ TOWER <b>·</b> 24F</span>
+          <span class="hud-tag"><i class="led pulse"></i>LIVE</span>
+        </div>
+        <div class="stage-img" id="hq-hit">
+          <img src="assets/hq-building.jpg" alt="YSJ CORP 본사 사옥">
+          <span class="plate">
+            <b>YSJ CORP</b>
+            <em>성준 통합 비서실 · 본사</em>
+          </span>
+          <span class="enter-hint">클릭하여 입장 →</span>
+          <span class="scan"></span>
+          <span class="brk tl"></span><span class="brk tr"></span><span class="brk bl"></span><span class="brk br"></span>
+        </div>
+        <div class="stage-foot">
+          <p class="foot-note">사옥을 눌러 <b>작전층 24F</b>로 진입하세요.</p>
+          <button class="btn-primary" id="enter-hq">입장하기</button>
+        </div>
+        <div class="stat-strip">
+          <span><em>3</em>부서 가동</span>
+          <span><em>2</em>직원 온라인</span>
+          <span><em id="ext-mission">0%</em>오늘 미션</span>
+        </div>
+      </div>
+
+      <!-- interior -->
+      <div class="stage hidden" id="stage-int">
+        <div class="stage-top">
+          <span class="hud-tag">SECTOR 01 <b>·</b> 작전층</span>
+          <span class="hud-tag"><i class="led pulse"></i>LIVE</span>
+        </div>
+        <div class="stage-img" id="floor-hit">
+          <img src="assets/office-map.jpg" alt="작전층 오피스 맵">
+          <button class="pin" data-room="grand" style="--x:27%;--y:50%">
+            <span class="pin-dot"></span>
+            <span class="pin-label">🏛️ 대회의실</span>
+            <span class="pin-sub">ON 2</span>
+          </button>
+          <button class="pin" data-room="cmd" style="--x:53%;--y:27%">
+            <span class="pin-dot"></span>
+            <span class="pin-label">🎯 지휘실</span>
+            <span class="pin-sub">ON 2</span>
+          </button>
+          <button class="pin" data-room="lounge" style="--x:76%;--y:66%">
+            <span class="pin-dot"></span>
+            <span class="pin-label">☕ 라운지</span>
+            <span class="pin-sub">ON 1</span>
+          </button>
+          <span class="scan"></span>
+          <span class="brk tl"></span><span class="brk tr"></span><span class="brk bl"></span><span class="brk br"></span>
+        </div>
+        <div class="stage-foot">
+          <p class="foot-note">구역 핀을 누르면 <b>해당 방 채널</b>로 바로 진입합니다.</p>
+          <button class="btn-ghost" id="back-ext">← 외관</button>
+        </div>
+      </div>
+
+      <div class="room-list" id="room-list"></div>
+    </section>
+
+    <!-- ================= ROOM ================= -->
+    <section class="view" id="v-room">
+      <div class="rooms">
+        <button class="room-pill" data-room="grand">🏛️ 대회의실</button>
+        <button class="room-pill active" data-room="cmd">🎯 지휘실</button>
+        <button class="room-pill" data-room="lounge">☕ 라운지</button>
+      </div>
+      <div class="room-head">
+        <span class="room-name" id="room-title">🎯 지휘실</span>
+        <span class="room-on"><i class="led pulse"></i>ON <b id="room-on">2</b></span>
+        <span class="room-mode" id="room-mode">LOCAL</span>
+      </div>
+
+      <div class="chat" id="chat"></div>
+
+      <div class="composer">
+        <div class="sender-row" id="sender-row">
+          <button class="sender active" data-sender="seongjun">👑 성준(대장님)</button>
+          <button class="sender" data-sender="mumu">🩵 무무</button>
+          <button class="sender" data-sender="uttang">🍊 우땅 비서</button>
+        </div>
+        <div class="mention-row">
+          <button class="mention" data-mention="@all">@all</button>
+          <button class="mention" data-mention="@무무">@무무</button>
+          <button class="mention" data-mention="@우땅비서">@우땅비서</button>
+        </div>
+        <div class="input-row">
+          <textarea id="msg-input" rows="1" placeholder="지시를 입력하세요"></textarea>
+          <button class="send" id="send" aria-label="전송">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M3.4 20.4l17.5-8.4c.8-.4.8-1.6 0-2L3.4 1.6c-.6-.3-1.3.2-1.3.9v5.1c0 .5.3.8.7.9l11.3 2.5-11.3 2.5c-.4.1-.7.4-.7.9v5.1c0 .7.7 1.2 1.3.9z"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= WORK ================= -->
+    <section class="view" id="v-work">
+      <div class="sect">
+        <div>
+          <span class="kicker">MISSION BOARD</span>
+          <h2>작업실</h2>
+        </div>
+        <span class="badge gold" id="work-pct">0%</span>
+      </div>
+
+      <div class="card hk gauge">
+        <div class="gauge-top"><span>오늘 미션 달성률</span><b id="work-count">0 / 6</b></div>
+        <div class="bar"><i id="work-bar" style="width:0%"></i></div>
+        <div class="gauge-foot"><span>체크할 때마다 회사 XP가 적립됩니다</span><b id="work-xp">+0 XP</b></div>
+      </div>
+
+      <div class="quest-wrap" id="quest-list"></div>
+      <p class="tiny-note">미션은 <b>이 기기</b>에 저장됩니다. 회의실 채팅만 실시간 공유됩니다.</p>
+    </section>
+
+    <!-- ================= AGENTS ================= -->
+    <section class="view" id="v-agents">
+      <div class="sect">
+        <div>
+          <span class="kicker">PERSONNEL</span>
+          <h2>비서현황</h2>
+        </div>
+        <span class="badge"><i class="led"></i>ON 2</span>
+      </div>
+      <div class="agent-wrap" id="agent-list"></div>
+      <p class="tiny-note">카드를 누르면 요원이 보고합니다.</p>
+    </section>
+
+    <!-- ================= MEMO ================= -->
+    <section class="view" id="v-memo">
+      <div class="sect">
+        <div>
+          <span class="kicker">LOG BOOK</span>
+          <h2>메모</h2>
+        </div>
+        <span class="badge" id="memo-count">0</span>
+      </div>
+
+      <div class="card hk memo-form">
+        <textarea id="memo-input" rows="3" placeholder="작전 메모 · 지시 · 아이디어를 남기세요"></textarea>
+        <div class="memo-actions">
+          <span class="hint">🔒 기기에만 저장</span>
+          <button class="btn-primary" id="memo-save">기록</button>
+        </div>
+      </div>
+
+      <ul class="memo-list" id="memo-list"></ul>
+    </section>
+
+  </main>
+</div>
+
+<!-- ================= SETTINGS SHEET ================= -->
+<div class="backdrop hidden" id="backdrop"></div>
+<aside class="sheet" id="sheet" aria-hidden="true">
+  <div class="grab"></div>
+  <div class="sheet-head">
+    <span class="kicker">SYSTEM</span>
+    <button class="icon-btn" id="sheet-close" aria-label="닫기">✕</button>
+  </div>
+  <h2 class="sheet-title">설정</h2>
+
+  <label class="field">
+    <span>Firebase Realtime Database URL</span>
+    <input id="db-url" type="url" inputmode="url" autocomplete="off" spellcheck="false"
+           placeholder="https://my-hq-default-rtdb.firebaseio.com">
+  </label>
+  <button class="btn-primary wide" id="db-save">연결 및 저장</button>
+  <button class="btn-ghost wide" id="db-clear">연결 해제</button>
+  <p class="status" id="db-status">현재 <b>로컬 모드</b> · 이 기기에만 저장됩니다.</p>
+
+  <div class="sheet-note">
+    <b>연결 방법</b>
+    <p>Firebase 콘솔 → Realtime Database 생성 → 규칙을 테스트 모드(<code>true</code>)로 둔 뒤,
+    표시되는 URL을 위에 붙여넣으면 회의실 채팅이 기기 간 실시간 동기화됩니다.</p>
+  </div>
+
+  <button class="btn-ghost wide danger" id="reset-all">이 기기 데이터 초기화</button>
+  <p class="version">YSJ CORP · COMMAND HQ v1.0</p>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
